@@ -16,6 +16,7 @@ constexpr const char* AI_ONNX_PREVIEW_TRAINING_DOMAIN = "ai.onnx.preview.trainin
 // The following two are equivalent in an onnx proto representation.
 constexpr const char* ONNX_DOMAIN = "";
 constexpr const char* AI_ONNX_DOMAIN = "ai.onnx";
+constexpr const char* COM_EXAMPLE_DOMAIN = "com.example";
 
 inline std::string NormalizeDomain(const std::string& domain) {
   return (domain == AI_ONNX_DOMAIN) ? ONNX_DOMAIN : domain;

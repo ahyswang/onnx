@@ -198,6 +198,7 @@ def save_external_data(tensor: TensorProto, base_path: str) -> None:
         raise ValueError("raw_data field doesn't exist.")
 
     # Create file if it doesn't exist
+    print(external_data_file_path)
     if not os.path.isfile(external_data_file_path):
         with open(external_data_file_path, "ab"):
             pass
