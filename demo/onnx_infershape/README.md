@@ -13,8 +13,8 @@ source /workspace/yswang26/python_env/onnx_venv/bin/activate
 2. 下载源码。
 
 ```
-git clone git@github.com:nod-ai/amd-shark-ai.git
-git checkout 6deb71a61f85a7022cc3600f7e29c0a455258272
+git clone git@github.com:onnx/onnx.git
+git checkout e80f4ce7d47c409dc6e28a7e47fc64856d2a660a
 ```
 
 3. 编译源码（下载需要翻墙依赖包）。
