@@ -120,5 +120,82 @@ ONNX_OPERATOR_SCHEMA(QLinearMatMul)
         "The type of the output and its zeropoint.")
     .TypeAndShapeInferenceFunction(defs::math::utils::QLinearMatMulShapeInference);
 
+void matmul_rhs_group_quant_ShapeInference(ONNX_NAMESPACE::InferenceContext& ctx) {
+    const auto* const a_type = ctx.getInputType(0);
+    const auto* const b_type = ctx.getInputType(1);
+    if (nullptr == a_type || nullptr == b_type || a_type->value_case() != ONNX_NAMESPACE::TypeProto::kTensorType ||
+        b_type->value_case() != ONNX_NAMESPACE::TypeProto::kTensorType) {
+        fail_type_inference("inputs are expected to have tensor type.");
+    }
+
+    auto groupSizeAttr = ctx.getAttribute("group_size");
+    // if axis is not defined
+    if (!groupSizeAttr) {
+        fail_shape_inference("Required attribute group_size is missing");
+    }
+    int group_size = static_cast<int>(groupSizeAttr->i());
+    if (group_size <= 0) {
+        fail_shape_inference("group_size must be a positive integer.");
+    }
+
+    const auto* const b_scales_type = ctx.getInputType(2);
+    if (nullptr == b_scales_type || 
+        b_scales_type->tensor_type().elem_type() != ONNX_NAMESPACE::TensorProto::FLOAT16) {
+        fail_type_inference("scales input is expected to have float16 type.");
+    }
+    if (b_scales_type->tensor_type().shape().dim_size() != 2) {
+        fail_type_inference("scales input is expected to be 2D tensor.");
+    }
+    if (!(b_scales_type->tensor_type().shape().dim(0).has_dim_value() && b_type->tensor_type().shape().dim(0).has_dim_value() && 
+        b_scales_type->tensor_type().shape().dim(0).dim_value() == b_type->tensor_type().shape().dim(0).dim_value() / group_size)) {
+        fail_type_inference("scales input's first dimension is expected to match the group size.");
+    }
+    if (!(b_scales_type->tensor_type().shape().dim(1).has_dim_value() && b_type->tensor_type().shape().dim(1).has_dim_value() && 
+        b_scales_type->tensor_type().shape().dim(1).dim_value() == b_type->tensor_type().shape().dim(1).dim_value())) {
+        fail_type_inference("scales input's second dimension is expected to match the input B's second dimension.");
+    }
+    
+    const auto* const b_zero_point_type = ctx.getInputType(3);
+    if (nullptr == b_zero_point_type ||
+        b_zero_point_type->tensor_type().elem_type() != b_type->tensor_type().elem_type()) {
+        fail_type_inference("input and zero_point pair is expected to have same type.");
+    }
+    if (b_zero_point_type->tensor_type().shape().dim_size() != 2) {
+        fail_type_inference("zero point input is expected to be 2D tensor.");
+    }
+    if (!(b_zero_point_type->tensor_type().shape().dim(0).has_dim_value() && b_type->tensor_type().shape().dim(0).has_dim_value() && 
+        b_zero_point_type->tensor_type().shape().dim(0).dim_value() == b_type->tensor_type().shape().dim(0).dim_value() / group_size)) {
+        fail_type_inference("scales input's first dimension is expected to match the group size.");
+    }
+    if (!(b_zero_point_type->tensor_type().shape().dim(1).has_dim_value() && b_type->tensor_type().shape().dim(1).has_dim_value() && 
+        b_zero_point_type->tensor_type().shape().dim(1).dim_value() == b_type->tensor_type().shape().dim(1).dim_value())) {
+        fail_type_inference("zero point input's second dimension is expected to match the input B's second dimension.");
+    }
+
+    propagateElemTypeFromInputToOutput(ctx, 0, 0);
+    
+    onnx::defs::math::utils::MatMulShapeInference(ctx, 0, 1);
+}
+    
+ONNX_OPERATOR_SCHEMA(matmul_rhs_group_quant)
+    .SetDomain("com.example")
+    .SinceVersion(1)
+    .Attr("bit_width", "Input tensor B int bit width", AttributeProto::INT, static_cast<int64_t>(8))
+    .Attr("group_size", "Input tensor B group size", AttributeProto::INT, static_cast<int64_t>(8))
+    .Attr("a_bit_width", "Input tensor a float bit width", AttributeProto::INT, static_cast<int64_t>(16))
+    .Attr("y_bit_width", "Output tensor y float bit width", AttributeProto::INT, static_cast<int64_t>(16))
+    .Input(0, "a", "Input tensor A", "T1")
+    .Input(1, "b", "Input tensor B", "T2")
+    .Input(2, "scales", "Scale tensor for input B", "TS")
+    .Input(3, "zps", "Zero point tensor for input B", "TZ")
+    .Output(0, "y", "Output tensor", "T1")
+    .TypeConstraint("T1", {"tensor(float16)"}, "Supports float16 tensors")
+    .TypeConstraint("T2", {"tensor(int8)"}, "Supports int8 tensors")
+    .TypeConstraint("TS", {"tensor(float16)"}, "The type of input b scales.")
+    .TypeConstraint("TZ", {"tensor(int8)", "tensor(uint8)"}, "The type of input b zeropoint.")
+    .SetDoc("Custom matmul operator for quantized tensors with per-channel quantization on the right-hand side")
+    .TypeAndShapeInferenceFunction(matmul_rhs_group_quant_ShapeInference);
+
+
 }  // namespace ONNX_NAMESPACE
 
