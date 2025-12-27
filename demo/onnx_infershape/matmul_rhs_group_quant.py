@@ -20,17 +20,32 @@ add_node = helper.make_node(
     outputs=["Z"],      # Add 的输出
 )
 
-# 定义输入和输出张量
+# # 定义输入和输出张量
+# inputs = [
+#     helper.make_tensor_value_info("A", TensorProto.FLOAT16, [2, 16]),  # 输入 A
+#     helper.make_tensor_value_info("B", TensorProto.INT8, [16, 4]),    # 输入 B
+#     helper.make_tensor_value_info("scales", TensorProto.FLOAT16, [16//8,4]),  # B 的 scale
+#     helper.make_tensor_value_info("zps", TensorProto.INT8, [16//8,4]),     # B 的 zero point
+#     helper.make_tensor_value_info("C", TensorProto.FLOAT16, [2, 4])  # Add 操作的输入 C
+# ]
+
+# outputs = [
+#     helper.make_tensor_value_info("Z", TensorProto.FLOAT16, [2, 4])  # Add 操作的输出 Z
+# ]
+
+# 定义输入和输出张量(动态维度版本)
 inputs = [
-    helper.make_tensor_value_info("A", TensorProto.FLOAT16, [2, 16]),  # 输入 A
+    helper.make_tensor_value_info(
+        "A", TensorProto.FLOAT16, ["batch_size", 16]  # 第一维度为动态大小
+    ),
     helper.make_tensor_value_info("B", TensorProto.INT8, [16, 4]),    # 输入 B
-    helper.make_tensor_value_info("scales", TensorProto.FLOAT16, [16//8,4]),  # B 的 scale
-    helper.make_tensor_value_info("zps", TensorProto.INT8, [16//8,4]),     # B 的 zero point
-    helper.make_tensor_value_info("C", TensorProto.FLOAT16, [2, 4])  # Add 操作的输入 C
+    helper.make_tensor_value_info("scales", TensorProto.FLOAT16, [16 // 8, 4]),  # B 的 scale
+    helper.make_tensor_value_info("zps", TensorProto.INT8, [16 // 8, 4]),        # B 的 zero point
+    helper.make_tensor_value_info("C", TensorProto.FLOAT16, ["batch_size", 4])  # Add 操作的输入 C
 ]
 
 outputs = [
-    helper.make_tensor_value_info("Z", TensorProto.FLOAT16, [2, 4])  # Add 操作的输出 Z
+    helper.make_tensor_value_info("Z", TensorProto.FLOAT16, ["batch_size", 4])  # Add 操作的输出 Z
 ]
 
 # 定义初始化器
