@@ -1,2 +1,3 @@
 onnx_infershape/test_myaddscale_inferred.onnx
 onnx_infershape/test_myaddscale.onnx
+data.ignore

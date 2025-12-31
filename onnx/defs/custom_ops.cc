@@ -23,25 +23,11 @@ ONNX_OPERATOR_SCHEMA(MyAddScale)
     });
 
 ONNX_OPERATOR_SCHEMA(QLinearAdd)
-    .SetDomain("com.example")
-    .SinceVersion(1)
-    .Input(0, "A", "Input tensor A", "T")
-    .Input(1, "B", "Input tensor B", "T")
-    .Output(0, "C", "Output tensor", "T")
-    .TypeConstraint("T", {"tensor(int8)"}, "Supports int8 tensors")
-    .SetDoc("Custom Add operator for int8 tensors")
-    .TypeAndShapeInferenceFunction([](InferenceContext& ctx) {
-        if (hasInputShape(ctx, 0)) {
-            propagateShapeAndTypeFromFirstInput(ctx);
-        }
-    });
-
-ONNX_OPERATOR_SCHEMA(QLinearMatMul)
     .SetDomain(COM_EXAMPLE_DOMAIN)
     .SinceVersion(1)
-    .SetDoc("Quantized matrix multiplication of two N-dimensional matrices a and b with "
+    .SetDoc("Quantized add of two N-dimensional tensor a and b with "
             "scales and zero points for inputs and output.")
-    .Input(0, "a", "N-dimensional quantized matrix a", "T1", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
+    .Input(0, "a", "N-dimensional quantized tensor a", "T1", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
     .Input(1, "a_scale", "scale of quantized input a", "TS", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
     .Input(
         2,
@@ -52,7 +38,7 @@ ONNX_OPERATOR_SCHEMA(QLinearMatMul)
         true,
         1,
         OpSchema::NonDifferentiable)
-    .Input(3, "b", "N-dimensional quantized matrix b", "T2", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
+    .Input(3, "b", "N-dimensional quantized tensor b", "T2", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
     .Input(4, "b_scale", "scale of quantized input b", "TS", OpSchema::Single, true, 1, OpSchema::NonDifferentiable)
     .Input(
         5,
@@ -84,7 +70,7 @@ ONNX_OPERATOR_SCHEMA(QLinearMatMul)
     .Output(
         0,
         "y",
-        "Quantized matrix multiply results from a * b",
+        "Quantized tensor add results from a * b",
         "T3",
         OpSchema::Single,
         true,
@@ -118,7 +104,11 @@ ONNX_OPERATOR_SCHEMA(QLinearMatMul)
             "tensor(float8e5m2)",
             "tensor(float8e5m2fnuz)"},
         "The type of the output and its zeropoint.")
-    .TypeAndShapeInferenceFunction(defs::math::utils::QLinearMatMulShapeInference);
+    .TypeAndShapeInferenceFunction([](InferenceContext& ctx) {
+        if (hasInputShape(ctx, 0)) {
+            propagateShapeAndTypeFromFirstInput(ctx);
+        }
+    });
 
 void matmul_rhs_group_quant_ShapeInference(ONNX_NAMESPACE::InferenceContext& ctx) {
     const auto* const a_type = ctx.getInputType(0);
@@ -178,21 +168,22 @@ void matmul_rhs_group_quant_ShapeInference(ONNX_NAMESPACE::InferenceContext& ctx
 }
     
 ONNX_OPERATOR_SCHEMA(matmul_rhs_group_quant)
-    .SetDomain("com.example")
+    .SetDomain(COM_EXAMPLE_DOMAIN)
     .SinceVersion(1)
     .Attr("bit_width", "Input tensor B int bit width", AttributeProto::INT, static_cast<int64_t>(8))
     .Attr("group_size", "Input tensor B group size", AttributeProto::INT, static_cast<int64_t>(8))
     .Attr("a_bit_width", "Input tensor a float bit width", AttributeProto::INT, static_cast<int64_t>(16))
     .Attr("y_bit_width", "Output tensor y float bit width", AttributeProto::INT, static_cast<int64_t>(16))
-    .Input(0, "a", "Input tensor A", "T1")
-    .Input(1, "b", "Input tensor B", "T2")
+    .Input(0, "a", "Input tensor A", "TA")
+    .Input(1, "b", "Input tensor B", "TB")
     .Input(2, "scales", "Scale tensor for input B", "TS")
     .Input(3, "zps", "Zero point tensor for input B", "TZ")
-    .Output(0, "y", "Output tensor", "T1")
-    .TypeConstraint("T1", {"tensor(float16)"}, "Supports float16 tensors")
-    .TypeConstraint("T2", {"tensor(int8)"}, "Supports int8 tensors")
+    .Output(0, "y", "Output tensor", "TY")
+    .TypeConstraint("TA", {"tensor(float16)", "tensor(float8e4m3fn)"}, "The type of input a.")
+    .TypeConstraint("TB", {"tensor(int8)"}, "The type of input b.")
+    .TypeConstraint("TY", {"tensor(float16)", "tensor(float8e4m3fn)"}, "The type of output y.")
     .TypeConstraint("TS", {"tensor(float16)"}, "The type of input b scales.")
-    .TypeConstraint("TZ", {"tensor(int8)", "tensor(uint8)"}, "The type of input b zeropoint.")
+    .TypeConstraint("TZ", {"tensor(int8)"}, "The type of input b zeropoint.")
     .SetDoc("Custom matmul operator for quantized tensors with per-channel quantization on the right-hand side")
     .TypeAndShapeInferenceFunction(matmul_rhs_group_quant_ShapeInference);
 
