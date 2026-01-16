@@ -2,12 +2,12 @@ import onnx
 from onnx import helper, TensorProto
 import sys 
 import os 
-from test_utils import check_node_output_type_and_shape
+import test_utils
 
 os.makedirs("./data.ignore", exist_ok=True)
 
 # 定义 matmul_rhs_group_quant 节点
-def test_matmul_rhs_group_quant_f8():
+def generate_matmul_rhs_group_quant_f8(model_path):
 
     matmul_node = helper.make_node(
         "matmul_rhs_group_quant",
@@ -76,26 +76,25 @@ def test_matmul_rhs_group_quant_f8():
     )
 
     # 保存模型
-    onnx.save(model, "./data.ignore/matmul_rhs_group_quant_with_add_f8.onnx")
-    print("模型已保存为 matmul_rhs_group_quant_with_add_f8.onnx")
+    onnx.save(model, model_path)
 
-    # 尝试加载和推导形状
-    try:
-        loaded_model = onnx.load("./data.ignore/matmul_rhs_group_quant_with_add_f8.onnx")
-        print("模型加载成功，包含 matmul_rhs_group_quant 和 Add 算子！")
-        onnx.checker.check_model(loaded_model, full_check=True)
-        print("模型检查成功！")
-        inferred_model = onnx.shape_inference.infer_shapes(loaded_model)
-        onnx.save_model(inferred_model, "./data.ignore/matmul_rhs_group_quant_with_add_inferred_f8.onnx")
-        print("形状推导成功，已保存为 matmul_rhs_group_quant_with_add_inferred_f8.onnx")
+def test_matmul_rhs_group_quant_with_add():
 
-        output_info = check_node_output_type_and_shape(
-            "./data.ignore/matmul_rhs_group_quant_with_add_inferred_f8.onnx",
-            "matmul_rhs_group_quant"
-        )
-        print(output_info)
-        assert output_info["Y"]["type"] == "FLOAT8E4M3FN", "输出类型不匹配，预期为 FLOAT16"
-        assert output_info["Y"]["shape"] == ["dynamic", 4], "输出形状不匹配，预期为 [dynamic, 4]"
+    test_cases = [
+        {
+            "name": "matmul_rhs_group_quant",
+            "model_path": "./data.ignore/matmul_rhs_group_quant_with_add_f8.onnx",
+            "generate_func": generate_matmul_rhs_group_quant_f8,
+            "generate_args": {},
+            "check_func": test_utils.check_value_info,
+            "check_args": { 
+                "Y" : {"type": "FLOAT8E4M3FN", "shape": ["dynamic", 4]}
+            }
+        },
+    ]
 
-    except Exception as e:
-        print("加载或推导形状失败: ", e)
+    test_utils.run_onnx_test(test_cases)
+
+if __name__ == "__main__":
+
+    test_matmul_rhs_group_quant_with_add()

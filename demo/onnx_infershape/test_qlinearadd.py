@@ -3,12 +3,12 @@ from onnx import helper, TensorProto
 
 import sys 
 import os 
-from test_utils import check_node_output_type_and_shape
+import test_utils
 
 os.makedirs("./data.ignore", exist_ok=True)
 
 # 构造包含 QLinearAdd 算子的简单图
-def test_qlineadd():
+def generate_qlineadd(model_path="./data.ignore/test_qlinearadd.onnx"):
 
     # 定义固定的常量值
     a_scale = helper.make_tensor("a_scale", TensorProto.FLOAT, [], [0.1])
@@ -52,25 +52,25 @@ def test_qlineadd():
     )
     model = helper.make_model(graph, opset_imports=[helper.make_opsetid("com.nebula", 1),  # COM_EXAMPLE_DOMAIN = "com.example"
                                                     helper.make_opsetid("", 21)])  # ONNX_DOMAIN = ""
-    onnx.save(model, "./data.ignore/test_qlinearadd.onnx")
+    onnx.save(model, model_path)
 
-    # 尝试加载
-    try:
-        m = onnx.load("./data.ignore/test_qlinearadd.onnx")
-        print("模型加载成功，包含 QLinearAdd 算子！")
-        onnx.checker.check_model(m, full_check=True)
-        print("模型检查成功，包含 QLinearAdd 算子！")
-        inferred_model = onnx.shape_inference.infer_shapes(m)
-        onnx.save_model(inferred_model, "./data.ignore/test_qlinearadd_inferred.onnx")
-        print("模型推形状成功，包含 QLinearAdd 算子！")
+def test_qlinearadd():
 
-        output_info = check_node_output_type_and_shape(
-            "./data.ignore/test_qlinearadd_inferred.onnx",
-            "QLinearAdd_1"
-        )
-        print(output_info)
-        assert output_info["Y_custom"]["type"] == "INT8", "输出类型不匹配，预期为 INT8"
-        assert output_info["Y_custom"]["shape"] == [3, 5], "输出形状不匹配，预期为 [3, 5]"
+    test_cases = [
+        {
+            "name": "QLinearAdd",
+            "model_path": "./data.ignore/test_qlinearadd.onnx",
+            "generate_func": generate_qlineadd,
+            "generate_args": {},
+            "check_func": test_utils.check_value_info,
+            "check_args": { 
+                "Y_custom" : {"type": "INT8", "shape": [3, 5]}
+            }
+        },
+    ]
 
-    except Exception as e:
-        print("加载失败: ", e)
+    test_utils.run_onnx_test(test_cases)
+
+if __name__ == "__main__":
+
+    test_qlinearadd()
