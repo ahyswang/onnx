@@ -437,7 +437,7 @@ ONNX_OPERATOR_SCHEMA(matmul_rhs_group_quant)
         The linear dequantization operator.
         )DOC";
 
-    ONNX_OPERATOR_SCHEMA(Dequant_PerGroup)
+    ONNX_OPERATOR_SCHEMA(DequantPerGroup)
             .SetDomain(COM_EXAMPLE_DOMAIN)
             .SinceVersion(1)
             .Input(0, "x", "N-D quantized input tensor to be de-quantized.", "T1")

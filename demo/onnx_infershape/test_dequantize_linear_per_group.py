@@ -16,14 +16,14 @@ def generate_dequantize_linear_per_group_basic(model_path):
     # 输入: 量化的 int8 张量
     # 输出: 反量化的 float32 张量
     dequant_node = helper.make_node(
-        "Dequant_PerGroup",
-        name="Dequant_PerGroup_1",
+        "DequantPerGroup",
+        name="DequantPerGroup_1",
         inputs=["x", "block_scale", "superblock_scale"],
         outputs=["y_dequant"],
         domain=COM_EXAMPLE_DOMAIN,
         axis=[0,1],
         block_size=[8, 1],
-        input_dtype=TensorProto.INT8,
+        input_dtype=TensorProto.INT4,
         output_dtype=TensorProto.FLOAT16,
         L1=1,
         L2=0
@@ -37,7 +37,7 @@ def generate_dequantize_linear_per_group_basic(model_path):
         outputs=["y"],
     )
     
-    x = test_utils.generator_onnx_tensor("x", [1024, 2048], TensorProto.INT8)
+    x = test_utils.generator_onnx_tensor("x", [1024, 2048], TensorProto.INT4)
     block_scale = test_utils.generator_onnx_tensor("block_scale", [128, 2048], TensorProto.INT4)
     superblock_scale = test_utils.generator_onnx_tensor("superblock_scale", [1, 1], TensorProto.FLOAT16)   # TODO: 
 
@@ -67,8 +67,8 @@ def generate_dequantize_linear_per_group_superblock(model_path):
     # 输入: 量化的 float8 张量
     # 输出: 反量化的 float16 张量
     dequant_node = helper.make_node(
-        "Dequant_PerGroup",
-        name="Dequant_PerGroup_1",
+        "DequantPerGroup",
+        name="DequantPerGroup_1",
         inputs=["x", "block_scale", "superblock_scale"],
         outputs=["y_dequant"],
         domain=COM_EXAMPLE_DOMAIN,
@@ -117,8 +117,8 @@ def generate_dequantize_linear_per_group_superblock(model_path):
 def generate_dequantize_linear_per_group_all(model_path):
     """"""
     dequant_node = helper.make_node(
-        "Dequant_PerGroup",
-        name="Dequant_PerGroup_2",
+        "DequantPerGroup",
+        name="DequantPerGroup_2",
         inputs=["x", "block_scale", "superblock_scale"],
         outputs=["y_dequant"],
         domain=COM_EXAMPLE_DOMAIN,
@@ -169,8 +169,8 @@ def generate_dequantize_linear_per_group_all_4bit(model_path, input_dtype=Tensor
     # 输入: 量化的 int8 张量
     # 输出: 反量化的 float32 张量
     dequant_node = helper.make_node(
-        "Dequant_PerGroup",
-        name="Dequant_PerGroup_1",
+        "DequantPerGroup",
+        name="DequantPerGroup_1",
         inputs=["x", "block_scale", "superblock_scale"],
         outputs=["y_dequant"],
         domain=COM_EXAMPLE_DOMAIN,
@@ -212,7 +212,7 @@ def generate_dequantize_linear_per_group_all_4bit(model_path, input_dtype=Tensor
         graph,
         opset_imports=[
             helper.make_opsetid(COM_EXAMPLE_DOMAIN, 1),
-            helper.make_opsetid("", 21)
+            helper.make_opsetid("", 21)  
         ]
     )
 
@@ -222,7 +222,7 @@ def test_dequantize_linear_per_group():
 
     test_cases = [
         {
-            "name": "Dequant_PerGroup_Basic",
+            "name": "DequantPerGroup_Basic",
             "model_path": "./data.ignore/test_dequantize_per_group_basic.onnx",
             "generate_func": generate_dequantize_linear_per_group_basic,
             "generate_args": {},
@@ -232,7 +232,7 @@ def test_dequantize_linear_per_group():
             }
         },
         {
-            "name": "Dequant_PerGroup_Superblock",
+            "name": "DequantPerGroup_Superblock",
             "model_path": "./data.ignore/test_dequantize_per_group_superblock.onnx",
             "generate_func": generate_dequantize_linear_per_group_superblock,
             "generate_args": {},
@@ -242,7 +242,7 @@ def test_dequantize_linear_per_group():
             }
         },
         {
-            "name": "Dequant_PerGroup_All",
+            "name": "DequantPerGroup_All",
             "model_path": "./data.ignore/test_dequantize_per_group_all.onnx",
             "generate_func": generate_dequantize_linear_per_group_all,
             "generate_args": {},
@@ -252,7 +252,7 @@ def test_dequantize_linear_per_group():
             }
         },
         {
-            "name": "Dequant_PerGroup_All_4bit",
+            "name": "DequantPerGroup_All_4bit",
             "model_path": "./data.ignore/test_dequantize_per_group_all_4bit.onnx",
             "generate_func": generate_dequantize_linear_per_group_all_4bit,
             "generate_args": {},
